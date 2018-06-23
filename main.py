@@ -68,6 +68,7 @@ def train(config):
                     loss_sum = tf.Summary(value=[tf.Summary.Value(
                         tag="model/loss", simple_value=loss), ])
                     writer.add_summary(loss_sum, global_step)
+                    print("step : {} with loss {}".format(global_step, loss_sum['simple_value']))
                 if global_step % config.checkpoint == 0:
                     _, summ = evaluate_batch(
                         model, config.val_num_batches, train_eval_file, sess, "train", handle, train_handle)

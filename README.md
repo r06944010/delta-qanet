@@ -1,4 +1,7 @@
-# QANet
+## Progress
+06/23 : original QANet / delta-squad / word and char embeding
+
+## QANet
 A Tensorflow implementation of Google's [QANet](https://openreview.net/pdf?id=B14TlG-RW) (previously Fast Reading Comprehension (FRC)) from [ICLR2018](https://openreview.net/forum?id=B14TlG-RW). (Note: This is not an official implementation from the authors of the paper)
 
 I wrote a blog post about implementing QANet. Check out [here](https://medium.com/@minsangkim/implementing-question-answering-networks-with-cnns-5ae5f08e312b) for more information!
