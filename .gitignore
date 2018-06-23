@@ -1,0 +1,4 @@
+jieba
+data_*/
+train_*/
+__pycache__/
