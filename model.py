@@ -71,33 +71,41 @@ class Model(object):
             self.q_maxlen, config.char_limit, config.hidden, config.tw_char_dim, config.num_heads
 
         with tf.variable_scope("Input_Embedding_Layer"):
-            ch_emb = tf.reshape(tf.nn.embedding_lookup(
-                self.char_mat, self.ch), [N * PL, CL, dc])
-            qh_emb = tf.reshape(tf.nn.embedding_lookup(
-                self.char_mat, self.qh), [N * QL, CL, dc])
-            ch_emb = tf.nn.dropout(ch_emb, 1.0 - 0.5 * self.dropout)
-            qh_emb = tf.nn.dropout(qh_emb, 1.0 - 0.5 * self.dropout)
+            if config.type == "all":
+                ch_emb = tf.reshape(tf.nn.embedding_lookup(
+                    self.char_mat, self.ch), [N * PL, CL, dc])
+                qh_emb = tf.reshape(tf.nn.embedding_lookup(
+                    self.char_mat, self.qh), [N * QL, CL, dc])
+                ch_emb = tf.nn.dropout(ch_emb, 1.0 - 0.5 * self.dropout)
+                qh_emb = tf.nn.dropout(qh_emb, 1.0 - 0.5 * self.dropout)
 
-			# Bidaf style conv-highway encoder
-            ch_emb = conv(ch_emb, d,
-                bias = True, activation = tf.nn.relu, kernel_size = 5, name = "char_conv", reuse = None)
-            qh_emb = conv(qh_emb, d,
-                bias = True, activation = tf.nn.relu, kernel_size = 5, name = "char_conv", reuse = True)
+    			# Bidaf style conv-highway encoder
+                ch_emb = conv(ch_emb, d,
+                    bias = True, activation = tf.nn.relu, kernel_size = 5, name = "char_conv", reuse = None)
+                qh_emb = conv(qh_emb, d,
+                    bias = True, activation = tf.nn.relu, kernel_size = 5, name = "char_conv", reuse = True)
 
-            ch_emb = tf.reduce_max(ch_emb, axis = 1)
-            qh_emb = tf.reduce_max(qh_emb, axis = 1)
+                ch_emb = tf.reduce_max(ch_emb, axis = 1)
+                qh_emb = tf.reduce_max(qh_emb, axis = 1)
 
-            ch_emb = tf.reshape(ch_emb, [N, PL, ch_emb.shape[-1]])
-            qh_emb = tf.reshape(qh_emb, [N, QL, ch_emb.shape[-1]])
+                ch_emb = tf.reshape(ch_emb, [N, PL, ch_emb.shape[-1]])
+                qh_emb = tf.reshape(qh_emb, [N, QL, ch_emb.shape[-1]])
 
-            c_emb = tf.nn.dropout(tf.nn.embedding_lookup(self.word_mat, self.c), 1.0 - self.dropout)
-            q_emb = tf.nn.dropout(tf.nn.embedding_lookup(self.word_mat, self.q), 1.0 - self.dropout)
+                c_emb = tf.nn.dropout(tf.nn.embedding_lookup(self.word_mat, self.c), 1.0 - self.dropout)
+                q_emb = tf.nn.dropout(tf.nn.embedding_lookup(self.word_mat, self.q), 1.0 - self.dropout)
 
-            c_emb = tf.concat([c_emb, ch_emb], axis=2)
-            q_emb = tf.concat([q_emb, qh_emb], axis=2)
+                c_emb = tf.concat([c_emb, ch_emb], axis=2)
+                q_emb = tf.concat([q_emb, qh_emb], axis=2)
 
-            c_emb = highway(c_emb, size = d, scope = "highway", dropout = self.dropout, reuse = None)
-            q_emb = highway(q_emb, size = d, scope = "highway", dropout = self.dropout, reuse = True)
+                c_emb = highway(c_emb, size = d, scope = "highway", dropout = self.dropout, reuse = None)
+                q_emb = highway(q_emb, size = d, scope = "highway", dropout = self.dropout, reuse = True)
+            
+            elif config.type == 'char':
+                c_emb = tf.nn.dropout(tf.nn.embedding_lookup(self.word_mat, self.c), 1.0 - self.dropout)
+                q_emb = tf.nn.dropout(tf.nn.embedding_lookup(self.word_mat, self.q), 1.0 - self.dropout)
+
+                c_emb = highway(c_emb, size = d, scope = "highway", dropout = self.dropout, reuse = None)
+                q_emb = highway(q_emb, size = d, scope = "highway", dropout = self.dropout, reuse = True)
 
         with tf.variable_scope("Embedding_Encoder_Layer"):
             c = residual_block(c_emb,

@@ -34,14 +34,6 @@ def convert_idx(text, tokens):
         current += len(token)
     return spans
 
-def char_idx_2_word_idx(idx, tokens):
-    count = 0
-    word_idx = 0
-    for token in tokens:
-        count += len(token)
-        if idx < count:
-            return word_idx
-        word_idx += 1
 
 def process_file(filename, data_type, word_counter, char_counter):
     print("Generating {} examples...".format(data_type))
@@ -54,7 +46,7 @@ def process_file(filename, data_type, word_counter, char_counter):
             for para in article["paragraphs"]:
                 context = para["context"].replace(
                     "''", '" ').replace("``", '" ')
-                context_tokens = word_tokenize(context)
+                context_tokens = list(context)
                 context_chars = [list(token) for token in context_tokens]
                 spans = convert_idx(context, context_tokens)
                 for token in context_tokens:
@@ -65,7 +57,7 @@ def process_file(filename, data_type, word_counter, char_counter):
                     total += 1
                     ques = qa["question"].replace(
                         "''", '" ').replace("``", '" ')
-                    ques_tokens = word_tokenize(ques)
+                    ques_tokens = list(ques)
                     ques_chars = [list(token) for token in ques_tokens]
                     for token in ques_tokens:
                         word_counter[token] += 1
@@ -85,14 +77,15 @@ def process_file(filename, data_type, word_counter, char_counter):
                         y1, y2 = answer_span[0], answer_span[-1]
                         y1s.append(y1)
                         y2s.append(y2)
-                        
-                        '''
-                        print("=======================")
-                        print(answer["text"])
-                        print(y1s, context_tokens[y1s[0]])
-                        print(y2s, context_tokens[y2s[0]])
-                        '''
+                    '''
+                    print("==============")
+                    print(answer_text)
+                    print(context_tokens[y1s[0]])
+                    print(context_tokens[y2s[0]])
+                    '''
 
+                    #print(y1s, answer_start)
+                    #print(y2s, answer_end-1)
                     example = {"context_tokens": context_tokens, "context_chars": context_chars, "ques_tokens": ques_tokens,
                                "ques_chars": ques_chars, "y1s": y1s, "y2s": y2s, "id": total}
                     examples.append(example)
@@ -147,8 +140,8 @@ def convert_to_features(config, data, word2idx_dict, char2idx_dict):
     context, question = data
     context = context.replace("''", '" ').replace("``", '" ')
     question = question.replace("''", '" ').replace("``", '" ')
-    example['context_tokens'] = word_tokenize(context)
-    example['ques_tokens'] = word_tokenize(question)
+    example['context_tokens'] = list(context)
+    example['ques_tokens'] = list(question)
     example['context_chars'] = [list(token) for token in example['context_tokens']]
     example['ques_chars'] = [list(token) for token in example['ques_tokens']]
 
@@ -206,7 +199,7 @@ def build_features(config, examples, data_type, out_file, word2idx_dict, char2id
 
     para_limit = config.test_para_limit if is_test else config.para_limit
     ques_limit = config.test_ques_limit if is_test else config.ques_limit
-    ans_limit  = config.test_ans_limit if is_test else config.ans_limit
+    ans_limit = 100 if is_test else config.ans_limit
     char_limit = config.char_limit
 
     def filter_func(example, is_test=False):
@@ -314,11 +307,11 @@ def prepro(config):
         char_counter, "char", emb_file=char_emb_file, size=char_emb_size, vec_size=char_emb_dim)
 
     build_features(config, train_examples, "train",
-                   config.train_record_file, word2idx_dict, char2idx_dict)
+                   config.train_record_file, char2idx_dict, char2idx_dict)
     dev_meta = build_features(config, dev_examples, "dev",
-                              config.dev_record_file, word2idx_dict, char2idx_dict)
+                              config.dev_record_file, char2idx_dict, char2idx_dict)
     test_meta = build_features(config, test_examples, "test",
-                               config.test_record_file, word2idx_dict, char2idx_dict, is_test=True)
+                               config.test_record_file, char2idx_dict, char2idx_dict, is_test=True)
 
     save(config.word_emb_file, word_emb_mat, message="word embedding")
     save(config.char_emb_file, char_emb_mat, message="char embedding")
@@ -327,5 +320,5 @@ def prepro(config):
     save(config.test_eval_file, test_eval, message="test eval")
     save(config.dev_meta, dev_meta, message="dev meta")
     save(config.test_meta, test_meta, message="test meta")
-    save(config.word_dictionary, word2idx_dict, message="word dictionary")
+    save(config.char_dictionary, char2idx_dict, message="word dictionary")
     save(config.char_dictionary, char2idx_dict, message="char dictionary")

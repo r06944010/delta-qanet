@@ -1,12 +1,12 @@
 import os
 import tensorflow as tf
-
+import sys
 '''
 This file is taken and modified from R-Net by HKUST-KnowComp
 https://github.com/HKUST-KnowComp/R-Net
 '''
 
-from prepro import prepro
+from prepro_char import prepro
 from main import train, test, demo
 
 flags = tf.flags
@@ -18,8 +18,8 @@ dev_file = os.path.join(home, "corpus", "DRCD", "DRCD_dev.json")
 test_file = os.path.join(home, "corpus", "DRCD", "DRCD_dev.json")
 glove_word_file = os.path.join(home, "corpus", "glove", "glove.840B.300d.txt")
 
-train_dir = "train_delta"
-model_name = "all"
+train_dir = "train_delta_" + str(sys.argv[1])
+model_name = sys.argv[1] # "all"
 dir_name = os.path.join(train_dir, model_name)
 
 if not os.path.exists(train_dir):
@@ -27,7 +27,7 @@ if not os.path.exists(train_dir):
 if not os.path.exists(os.path.join(os.getcwd(),dir_name)):
     os.mkdir(os.path.join(os.getcwd(),dir_name))
 
-target_dir = "data_delta"
+target_dir = "data_delta_" + str(sys.argv[1])
 
 log_dir = os.path.join(dir_name, "event")
 save_dir = os.path.join(dir_name, "model")
@@ -90,6 +90,7 @@ flags.DEFINE_integer("ques_limit", 50, "Limit length for question")
 flags.DEFINE_integer("ans_limit", 30, "Limit length for answers")
 flags.DEFINE_integer("test_para_limit", 1000, "Limit length for paragraph in test file")
 flags.DEFINE_integer("test_ques_limit", 100, "Limit length for question in test file")
+flags.DEFINE_integer("test_ans_limit", 100, "Limit length for answer in test file")
 flags.DEFINE_integer("char_limit", 16, "Limit length for character")
 flags.DEFINE_integer("word_count_limit", -1, "Min count for word")
 flags.DEFINE_integer("char_count_limit", -1, "Min count for char")
@@ -134,6 +135,7 @@ flags.DEFINE_integer("tw_char_size", 174894, "Corpus size for char2vec")
 flags.DEFINE_integer("tw_word_dim", 300, "Embedding dimension for Glove")
 flags.DEFINE_integer("tw_char_dim", 300, "Embedding dimension for char")
 
+flags.DEFINE_string("type", sys.argv[1], "word/char embedding choose")
 
 def main(_):
     config = flags.FLAGS

@@ -1,9 +1,8 @@
 #!/bin/bash
 
 NOW=$(date +"%m%d-%R")
-echo "mode : $1"
-if [[ $1 = "train" ]];then
-    CUDA_VISIBLE_DEVICES=1 python config.py --mode train | tee log/$NOW
-elif [[ $1 = "debug" ]];then
-    CUDA_VISIBLE_DEVICES=1 python config.py --mode debug | tee log/$NOW
-fi
+echo "CUDA_VISIBLE_DEVICES=$3 python config.py $2 --mode $1 | tee log/$2/$NOW"
+echo "  GPU : $3"
+echo "  $1"
+echo "  embedding type : $2"
+CUDA_VISIBLE_DEVICES=$3 python config.py $2 --mode $1 --type $2 | tee log/$2/$NOW
