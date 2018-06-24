@@ -101,8 +101,8 @@ class Model(object):
                 q_emb = highway(q_emb, size = d, scope = "highway", dropout = self.dropout, reuse = True)
             
             elif config.type == 'char':
-                c_emb = tf.nn.dropout(tf.nn.embedding_lookup(self.word_mat, self.c), 1.0 - self.dropout)
-                q_emb = tf.nn.dropout(tf.nn.embedding_lookup(self.word_mat, self.q), 1.0 - self.dropout)
+                c_emb = tf.nn.dropout(tf.nn.embedding_lookup(self.char_mat, self.c), 1.0 - self.dropout)
+                q_emb = tf.nn.dropout(tf.nn.embedding_lookup(self.char_mat, self.q), 1.0 - self.dropout)
 
                 c_emb = highway(c_emb, size = d, scope = "highway", dropout = self.dropout, reuse = None)
                 q_emb = highway(q_emb, size = d, scope = "highway", dropout = self.dropout, reuse = True)

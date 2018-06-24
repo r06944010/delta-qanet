@@ -1,7 +1,11 @@
 ## Progress
 06/23 : original QANet / delta-squad / word and char embeding
-how to run : bash run.sh train all 0,1
-             bash run.sh train char 0,1
+
+how to run : 
+
+(1) bash run.sh train all 0,1
+
+(2) bash run.sh train char 0,1
 
 ## QANet
 A Tensorflow implementation of Google's [QANet](https://openreview.net/pdf?id=B14TlG-RW) (previously Fast Reading Comprehension (FRC)) from [ICLR2018](https://openreview.net/forum?id=B14TlG-RW). (Note: This is not an official implementation from the authors of the paper)
