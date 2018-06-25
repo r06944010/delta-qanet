@@ -6,28 +6,41 @@ This file is taken and modified from R-Net by HKUST-KnowComp
 https://github.com/HKUST-KnowComp/R-Net
 '''
 
-from prepro_char import prepro
+from prepro_tocfl import prepro
 from main import train, test, demo
 
 flags = tf.flags
 
 home = os.path.expanduser("~")
 
+### TOCFL
+train_dir = "train_tocfl_" + str(sys.argv[1])
+target_dir = "data_tocfl_" + str(sys.argv[1])
+train_file = None
+dev_file = None
+test_file = os.path.join(home, "corpus", "tocfl", "transcription.csv")
+glove_word_file = None
+
+### Delta
+'''
 train_file = os.path.join(home, "corpus", "DRCD", "DRCD_training.json")
 dev_file = os.path.join(home, "corpus", "DRCD", "DRCD_dev.json")
 test_file = os.path.join(home, "corpus", "DRCD", "DRCD_dev.json")
-glove_word_file = os.path.join(home, "corpus", "glove", "glove.840B.300d.txt")
-
+# glove_word_file = os.path.join(home, "corpus", "glove", "glove.840B.300d.txt")
+glove_word_file = None
 train_dir = "train_delta_" + str(sys.argv[1])
-model_name = sys.argv[1] # "all"
-dir_name = os.path.join(train_dir, model_name)
+target_dir = "data_delta_" + str(sys.argv[1])
+'''
+
+# model_name = sys.argv[1] # "all"
+dir_name = os.path.join(train_dir)
 
 if not os.path.exists(train_dir):
     os.mkdir(train_dir)
 if not os.path.exists(os.path.join(os.getcwd(),dir_name)):
     os.mkdir(os.path.join(os.getcwd(),dir_name))
 
-target_dir = "data_delta_" + str(sys.argv[1])
+embedding_dir = target_dir
 
 log_dir = os.path.join(dir_name, "event")
 save_dir = os.path.join(dir_name, "model")
@@ -35,16 +48,19 @@ answer_dir = os.path.join(dir_name, "answer")
 train_record_file = os.path.join(target_dir, "train.tfrecords")
 dev_record_file = os.path.join(target_dir, "dev.tfrecords")
 test_record_file = os.path.join(target_dir, "test.tfrecords")
-word_emb_file = os.path.join(target_dir, "word_emb.json")
-char_emb_file = os.path.join(target_dir, "char_emb.json")
+
+word_emb_file = os.path.join(embedding_dir, "word_emb.json")
+char_emb_file = os.path.join(embedding_dir, "char_emb.json")
 train_eval = os.path.join(target_dir, "train_eval.json")
 dev_eval = os.path.join(target_dir, "dev_eval.json")
 test_eval = os.path.join(target_dir, "test_eval.json")
 dev_meta = os.path.join(target_dir, "dev_meta.json")
 test_meta = os.path.join(target_dir, "test_meta.json")
-word_dictionary = os.path.join(target_dir, "word_dictionary.json")
-char_dictionary = os.path.join(target_dir, "char_dictionary.json")
+
+word_dictionary = os.path.join(embedding_dir, "word_dictionary.json")
+char_dictionary = os.path.join(embedding_dir, "char_dictionary.json")
 answer_file = os.path.join(answer_dir, "answer.json")
+answer_csv = os.path.join(answer_dir, "answer.csv")
 
 if not os.path.exists(target_dir):
     os.makedirs(target_dir)
@@ -76,6 +92,7 @@ flags.DEFINE_string("test_eval_file", test_eval, "Out file for test eval")
 flags.DEFINE_string("dev_meta", dev_meta, "Out file for dev meta")
 flags.DEFINE_string("test_meta", test_meta, "Out file for test meta")
 flags.DEFINE_string("answer_file", answer_file, "Out file for answer")
+flags.DEFINE_string("answer_csv", answer_csv, "Out file for answer")
 flags.DEFINE_string("word_dictionary", word_dictionary, "Word dictionary")
 flags.DEFINE_string("char_dictionary", char_dictionary, "Character dictionary")
 

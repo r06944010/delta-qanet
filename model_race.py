@@ -169,7 +169,6 @@ class Model(object):
         with tf.variable_scope("Output_Layer"):
             start_logits = tf.squeeze(conv(tf.concat([self.enc[1], self.enc[2]],axis = -1),1, bias = False, name = "start_pointer"),-1)
             end_logits = tf.squeeze(conv(tf.concat([self.enc[1], self.enc[3]],axis = -1),1, bias = False, name = "end_pointer"), -1)
-            # guess : mask the padding part pad in the end of the passage
             self.logits = [mask_logits(start_logits, mask = self.c_mask),
                            mask_logits(end_logits, mask = self.c_mask)]
 

@@ -7,6 +7,10 @@ how to run :
 
 (2) bash run.sh train char 0,1
 
+06/24
+
+cat text.txt | ./fasttext print-sentence-vectors model.bin > result.txt
+
 ## QANet
 A Tensorflow implementation of Google's [QANet](https://openreview.net/pdf?id=B14TlG-RW) (previously Fast Reading Comprehension (FRC)) from [ICLR2018](https://openreview.net/forum?id=B14TlG-RW). (Note: This is not an official implementation from the authors of the paper)
 

@@ -3,6 +3,7 @@ import ujson as json
 import numpy as np
 from tqdm import tqdm
 import os
+import csv
 
 '''
 This file is taken and modified from R-Net by HKUST-KnowComp
@@ -173,8 +174,15 @@ def test(config):
                 remapped_dict.update(remapped_dict_)
                 losses.append(loss)
             loss = np.mean(losses)
-            metrics = evaluate(eval_file, answer_dict)
             with open(config.answer_file, "w") as fh:
                 json.dump(remapped_dict, fh)
+            '''
+            metrics = evaluate(eval_file, answer_dict)
             print("Exact Match: {}, F1: {}".format(
                 metrics['exact_match'], metrics['f1']))
+            '''
+            with open(config.answer_csv, 'w') as f:
+                print('dumping ans file to : %s' % str(config.answer_csv))
+                s = csv.writer(f,delimiter=',',lineterminator='\n')
+                for i in sorted(remapped_dict):  
+                    s.writerow([i,remapped_dict[i]])

@@ -7,18 +7,14 @@ from collections import Counter
 import numpy as np
 from codecs import open
 import jieba
+import os
 
 '''
 This file is taken and modified from R-Net by HKUST-KnowComp
 https://github.com/HKUST-KnowComp/R-Net
 '''
 
-# nlp = spacy.blank("en")
-
-
 def word_tokenize(sent):
-    # doc = nlp(sent)
-    # return [token.text for token in doc]
     doc = jieba.cut(sent)
     return list(doc)
 
@@ -37,62 +33,47 @@ def convert_idx(text, tokens):
 
 def process_file(filename, data_type, word_counter, char_counter):
     print("Generating {} examples...".format(data_type))
+    print(filename)
     examples = []
     eval_examples = {}
     total = 0
-    with open(filename, "r") as fh:
-        source = json.load(fh)
-        for article in tqdm(source["data"]):
-            for para in article["paragraphs"]:
-                context = para["context"].replace(
-                    "''", '" ').replace("``", '" ')
-                context_tokens = list(context)
-                context_chars = [list(token) for token in context_tokens]
-                spans = convert_idx(context, context_tokens)
-                for token in context_tokens:
-                    word_counter[token] += len(para["qas"])
-                    for char in token:
-                        char_counter[char] += len(para["qas"])
-                for qa in para["qas"]:
-                    total += 1
-                    ques = qa["question"].replace(
-                        "''", '" ').replace("``", '" ')
-                    ques_tokens = list(ques)
-                    ques_chars = [list(token) for token in ques_tokens]
-                    for token in ques_tokens:
-                        word_counter[token] += 1
-                        for char in token:
-                            char_counter[char] += 1
-                    y1s, y2s = [], []
-                    answer_texts = []
-                    for answer in qa["answers"]:
-                        answer_text = answer["text"]
-                        answer_start = answer['answer_start']
-                        answer_end = answer_start + len(answer_text)
-                        answer_texts.append(answer_text)
-                        answer_span = []
-                        for idx, span in enumerate(spans):
-                            if not (answer_end <= span[0] or answer_start >= span[1]):
-                                answer_span.append(idx)
-                        y1, y2 = answer_span[0], answer_span[-1]
-                        y1s.append(y1)
-                        y2s.append(y2)
-                    '''
-                    print("==============")
-                    print(answer_text)
-                    print(context_tokens[y1s[0]])
-                    print(context_tokens[y2s[0]])
-                    '''
 
-                    #print(y1s, answer_start)
-                    #print(y2s, answer_end-1)
-                    example = {"context_tokens": context_tokens, "context_chars": context_chars, "ques_tokens": ques_tokens,
-                               "ques_chars": ques_chars, "y1s": y1s, "y2s": y2s, "id": total}
-                    examples.append(example)
-                    eval_examples[str(total)] = {
-                        "context": context, "spans": spans, "answers": answer_texts, "uuid": qa["id"]}
-        random.shuffle(examples)
-        print("{} questions in total".format(len(examples)))
+    for path, directories, files in os.walk(filename):
+        for f in tqdm(files):
+            # print(os.path.join(path, f))
+            fh = open(os.path.join(path, f), "r") if f.endswith('.txt') else None
+            if fh == None:
+                continue
+            source = json.load(fh)
+
+            article = source["article"]
+            context_tokens = word_tokenize(article)
+            context_chars = [list(token) for token in context_tokens]
+
+            for i in range(len(source["questions"])):
+                total += 1
+                ques = source['questions'][i]
+                opt = source['options'][i]
+                ans = source['answers'][i] # ABCD
+
+                l = ['A','B','C','D']
+                ans = [x for x in range(4) if l[x]==ans][0] # 0123
+
+                ques_tokens = word_tokenize(ques)
+                ques_chars = [list(token) for token in ques_tokens]
+
+                opt_tokens = [word_tokenize(opt[x]) for x in range(4)]
+                opt_chars = [[list(token) for token in opt_tokens[x]] for x in range(4)]
+
+                example = {"context_tokens": context_tokens, "context_chars": context_chars, 
+                           "ques_tokens": ques_tokens, "ques_chars": ques_chars,
+                           "options": opt_tokens, "options_chars": opt_chars,
+                           "id": total, "ans": ans}
+                examples.append(example)
+                eval_examples[str(total)] = {"context": article, "ans": ans, "uuid": source["id"]}
+    
+    random.shuffle(examples)
+    print("{} questions in total".format(len(examples)))
     return examples, eval_examples
 
 
@@ -104,13 +85,12 @@ def get_embedding(counter, data_type, limit=-1, emb_file=None, size=None, vec_si
         assert size is not None
         assert vec_size is not None
         with open(emb_file, "r", encoding="utf-8") as fh:
-            print('embedding file info : {}'.format(fh.readline()))
+            print('embedding file info : ', fh.readline())
             for line in tqdm(fh, total=size):
                 array = line.split()
                 word = "".join(array[0:-vec_size])
                 vector = list(map(float, array[-vec_size:]))
-                if word in counter and counter[word] > limit:
-                    embedding_dict[word] = vector
+                embedding_dict[word] = vector
         print("{} / {} tokens have corresponding {} embedding vector".format(
             len(embedding_dict), len(filtered_elements), data_type))
     else:
@@ -140,8 +120,8 @@ def convert_to_features(config, data, word2idx_dict, char2idx_dict):
     context, question = data
     context = context.replace("''", '" ').replace("``", '" ')
     question = question.replace("''", '" ').replace("``", '" ')
-    example['context_tokens'] = list(context)
-    example['ques_tokens'] = list(question)
+    example['context_tokens'] = word_tokenize(context)
+    example['ques_tokens'] = word_tokenize(question)
     example['context_chars'] = [list(token) for token in example['context_tokens']]
     example['ques_chars'] = [list(token) for token in example['ques_tokens']]
 
@@ -199,13 +179,16 @@ def build_features(config, examples, data_type, out_file, word2idx_dict, char2id
 
     para_limit = config.test_para_limit if is_test else config.para_limit
     ques_limit = config.test_ques_limit if is_test else config.ques_limit
-    ans_limit = 100 if is_test else config.ans_limit
+    ans_limit = config.test_ques_limit if is_test else config.ans_limit
     char_limit = config.char_limit
 
     def filter_func(example, is_test=False):
         return len(example["context_tokens"]) > para_limit or \
                len(example["ques_tokens"]) > ques_limit or \
-               (example["y2s"][0] - example["y1s"][0]) > ans_limit
+               len(example["options"][0]) > ans_limit or \
+               len(example["options"][1]) > ans_limit or \
+               len(example["options"][2]) > ans_limit or \
+               len(example["options"][3]) > ans_limit
 
     print("Processing {} examples...".format(data_type))
     writer = tf.python_io.TFRecordWriter(out_file)
@@ -223,25 +206,24 @@ def build_features(config, examples, data_type, out_file, word2idx_dict, char2id
         context_char_idxs = np.zeros([para_limit, char_limit], dtype=np.int32)
         ques_idxs = np.zeros([ques_limit], dtype=np.int32)
         ques_char_idxs = np.zeros([ques_limit, char_limit], dtype=np.int32)
-        y1 = np.zeros([para_limit], dtype=np.float32)
-        y2 = np.zeros([para_limit], dtype=np.float32)
+        opt_idxs = np.zeros([4, ans_limit], dtype=np.float32)
+        opt_char_idxs = np.zeros([4, ans_limit, char_limit], dtype=np.float32)
 
         def _get_word(word):
-            for each in (word, word.lower(), word.capitalize(), word.upper()):
-                if each in word2idx_dict:
-                    return word2idx_dict[each]
-            return 1
-
+            return word2idx_dict[word] if word in word2idx_dict else 1
+        
         def _get_char(char):
-            if char in char2idx_dict:
-                return char2idx_dict[char]
-            return 1
+            return char2idx_dict[char] if char in char2idx_dict else 1
 
         for i, token in enumerate(example["context_tokens"]):
             context_idxs[i] = _get_word(token)
 
         for i, token in enumerate(example["ques_tokens"]):
             ques_idxs[i] = _get_word(token)
+
+        for k in range(4):
+            for i, token in enumerate(example["options"][k]):
+                opt_idxs[k][i] = _get_word(token)
 
         for i, token in enumerate(example["context_chars"]):
             for j, char in enumerate(token):
@@ -255,17 +237,22 @@ def build_features(config, examples, data_type, out_file, word2idx_dict, char2id
                     break
                 ques_char_idxs[i, j] = _get_char(char)
 
-        start, end = example["y1s"][-1], example["y2s"][-1]
-        y1[start], y2[end] = 1.0, 1.0
+        for k in range(4):
+            for i, token in enumerate(example["options_chars"][k]):
+                for j, char in enumerate(token):
+                    if j == char_limit:
+                        break
+                    opt_char_idxs[k,i,j] = _get_char(char)
 
         record = tf.train.Example(features=tf.train.Features(feature={
                                   "context_idxs": tf.train.Feature(bytes_list=tf.train.BytesList(value=[context_idxs.tostring()])),
                                   "ques_idxs": tf.train.Feature(bytes_list=tf.train.BytesList(value=[ques_idxs.tostring()])),
+                                  "opt_idxs": tf.train.Feature(bytes_list=tf.train.BytesList(value=[opt_idxs.tostring()])),
                                   "context_char_idxs": tf.train.Feature(bytes_list=tf.train.BytesList(value=[context_char_idxs.tostring()])),
                                   "ques_char_idxs": tf.train.Feature(bytes_list=tf.train.BytesList(value=[ques_char_idxs.tostring()])),
-                                  "y1": tf.train.Feature(bytes_list=tf.train.BytesList(value=[y1.tostring()])),
-                                  "y2": tf.train.Feature(bytes_list=tf.train.BytesList(value=[y2.tostring()])),
-                                  "id": tf.train.Feature(int64_list=tf.train.Int64List(value=[example["id"]]))
+                                  "opt_char_idxs": tf.train.Feature(bytes_list=tf.train.BytesList(value=[opt_char_idxs.tostring()])),
+                                  "id": tf.train.Feature(int64_list=tf.train.Int64List(value=[example["id"]])),
+                                  "ans": tf.train.Feature(int64_list=tf.train.Int64List(value=[example["ans"]])),
                                   }))
         writer.write(record.SerializeToString())
     print("Built {} / {} instances of features in total".format(total, total_))
@@ -282,6 +269,7 @@ def save(filename, obj, message=None):
 
 
 def prepro(config):
+
     word_counter, char_counter = Counter(), Counter()
     train_examples, train_eval = process_file(
         config.train_file, "train", word_counter, char_counter)
@@ -290,12 +278,6 @@ def prepro(config):
     test_examples, test_eval = process_file(
         config.test_file, "test", word_counter, char_counter)
 
-    '''
-    word_emb_file = config.fasttext_file if config.fasttext else config.glove_word_file
-    char_emb_file = config.glove_char_file if config.pretrained_char else None
-    char_emb_size = config.glove_char_size if config.pretrained_char else None
-    char_emb_dim = config.glove_dim if config.pretrained_char else config.char_dim
-    '''
     word_emb_file = config.tw_w2v
     char_emb_file = config.tw_c2v
     char_emb_size = config.tw_char_size
@@ -307,14 +289,14 @@ def prepro(config):
         char_counter, "char", emb_file=char_emb_file, size=char_emb_size, vec_size=char_emb_dim)
 
     build_features(config, train_examples, "train",
-                   config.train_record_file, char2idx_dict, char2idx_dict)
+                   config.train_record_file, word2idx_dict, char2idx_dict)
     dev_meta = build_features(config, dev_examples, "dev",
-                              config.dev_record_file, char2idx_dict, char2idx_dict)
+                              config.dev_record_file, word2idx_dict, char2idx_dict)
     test_meta = build_features(config, test_examples, "test",
-                               config.test_record_file, char2idx_dict, char2idx_dict, is_test=True)
+                               config.test_record_file, word2idx_dict, char2idx_dict, is_test=True)
 
-    save(config.word_emb_file, word_emb_mat, message="word embedding")
-    save(config.char_emb_file, char_emb_mat, message="char embedding")
+    # save(config.word_emb_file, word_emb_mat, message="word embedding")
+    # save(config.char_emb_file, char_emb_mat, message="char embedding")
     save(config.train_eval_file, train_eval, message="train eval")
     save(config.dev_eval_file, dev_eval, message="dev eval")
     save(config.test_eval_file, test_eval, message="test eval")
