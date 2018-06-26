@@ -6,7 +6,7 @@ This file is taken and modified from R-Net by HKUST-KnowComp
 https://github.com/HKUST-KnowComp/R-Net
 '''
 
-from prepro_tocfl import prepro
+from prepro_char import prepro
 from main import train, test, demo
 
 flags = tf.flags
@@ -14,15 +14,17 @@ flags = tf.flags
 home = os.path.expanduser("~")
 
 ### TOCFL
+'''
 train_dir = "train_tocfl_" + str(sys.argv[1])
 target_dir = "data_tocfl_" + str(sys.argv[1])
 train_file = None
 dev_file = None
 test_file = os.path.join(home, "corpus", "tocfl", "transcription.csv")
 glove_word_file = None
+'''
 
 ### Delta
-'''
+
 train_file = os.path.join(home, "corpus", "DRCD", "DRCD_training.json")
 dev_file = os.path.join(home, "corpus", "DRCD", "DRCD_dev.json")
 test_file = os.path.join(home, "corpus", "DRCD", "DRCD_dev.json")
@@ -30,7 +32,7 @@ test_file = os.path.join(home, "corpus", "DRCD", "DRCD_dev.json")
 glove_word_file = None
 train_dir = "train_delta_" + str(sys.argv[1])
 target_dir = "data_delta_" + str(sys.argv[1])
-'''
+
 
 # model_name = sys.argv[1] # "all"
 dir_name = os.path.join(train_dir)
@@ -102,7 +104,7 @@ flags.DEFINE_integer("glove_word_size", int(2.2e6), "Corpus size for Glove")
 flags.DEFINE_integer("glove_dim", 300, "Embedding dimension for Glove")
 flags.DEFINE_integer("char_dim", 64, "Embedding dimension for char")
 
-flags.DEFINE_integer("para_limit", 400, "Limit length for paragraph")
+flags.DEFINE_integer("para_limit", 800, "Limit length for paragraph")
 flags.DEFINE_integer("ques_limit", 50, "Limit length for question")
 flags.DEFINE_integer("ans_limit", 30, "Limit length for answers")
 flags.DEFINE_integer("test_para_limit", 1000, "Limit length for paragraph in test file")

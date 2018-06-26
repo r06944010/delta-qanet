@@ -64,6 +64,11 @@ def process_file(filename, data_type, word_counter, char_counter):
         context_tokens = word_tokenize(article)
         context_chars = [list(token) for token in context_tokens]
 
+        for token in context_tokens:
+            word_counter[token] += 1
+            for char in token:
+                char_counter[char] += 1
+
         spans = convert_idx(article, context_tokens)
 
         ask = ori_example[i][2].split('題',1)[1].replace(' ','')
@@ -72,6 +77,12 @@ def process_file(filename, data_type, word_counter, char_counter):
 
         ques_tokens = word_tokenize(ask[0])
         ques_chars = [list(token) for token in ques_tokens]
+
+        for token in ques_tokens:
+            word_counter[token] += 1
+            for char in token:
+                char_counter[char] += 1
+
         example = {"context_tokens": context_tokens, "context_chars": context_chars, "ques_tokens": ques_tokens,
                    "ques_chars": ques_chars, "y1s": [-1], "y2s": [-1], "id": i}
 
@@ -96,7 +107,8 @@ def get_embedding(counter, data_type, limit=-1, emb_file=None, size=None, vec_si
                 array = line.split()
                 word = "".join(array[0:-vec_size])
                 vector = list(map(float, array[-vec_size:]))
-                embedding_dict[word] = vector
+                if word in counter and counter[word] > limit:
+                    embedding_dict[word] = vector
         print("{} / {} tokens have corresponding {} embedding vector".format(
             len(embedding_dict), len(filtered_elements), data_type))
     else:
