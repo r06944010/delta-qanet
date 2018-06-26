@@ -312,9 +312,6 @@ def prepro(config):
                               config.dev_record_file, char2idx_dict, char2idx_dict)
     test_meta = build_features(config, test_examples, "test",
                                config.test_record_file, char2idx_dict, char2idx_dict, is_test=True)
-
-    word_emb_mat = None
-    word2idx_dict = None
     
     save(config.word_emb_file, word_emb_mat, message="word embedding")
     save(config.char_emb_file, char_emb_mat, message="char embedding")
