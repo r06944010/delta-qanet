@@ -154,7 +154,7 @@ flags.DEFINE_integer("tw_char_size", 174894, "Corpus size for char2vec")
 flags.DEFINE_integer("tw_word_dim", 300, "Embedding dimension for Glove")
 flags.DEFINE_integer("tw_char_dim", 300, "Embedding dimension for char")
 
-flags.DEFINE_string("type", sys.argv[1], "word/char embedding choose")
+flags.DEFINE_string("type", "all", "word/char embedding choose")
 
 def main(_):
     config = flags.FLAGS
