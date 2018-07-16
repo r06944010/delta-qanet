@@ -6,33 +6,37 @@ This file is taken and modified from R-Net by HKUST-KnowComp
 https://github.com/HKUST-KnowComp/R-Net
 '''
 
-from prepro import prepro
+from prepro_char_kgb import prepro
 from main import train, test, demo
 
 flags = tf.flags
 
 home = os.path.expanduser("~")
 
-### TOCFL
-'''
-train_dir = "train_tocfl_" + str(sys.argv[1])
-target_dir = "data_tocfl_" + str(sys.argv[1])
-train_file = None
-dev_file = None
-test_file = os.path.join(home, "corpus", "tocfl", "transcription.csv")
-glove_word_file = None
-'''
+if sys.argv[2] == 'TOCFL':
+    train_dir = "train_tocfl_" + str(sys.argv[1])
+    target_dir = "data_tocfl_" + str(sys.argv[1])
+    train_file = None
+    dev_file = None
+    test_file = os.path.join(home, "corpus", "tocfl", "transcription.csv")
+    glove_word_file = None
 
-### Delta
-
-train_file = os.path.join(home, "corpus", "DRCD", "DRCD_training.json")
-dev_file = os.path.join(home, "corpus", "DRCD", "DRCD_dev.json")
-test_file = os.path.join(home, "corpus", "DRCD", "DRCD_dev.json")
-# glove_word_file = os.path.join(home, "corpus", "glove", "glove.840B.300d.txt")
-glove_word_file = None
-train_dir = "train_delta_" + str(sys.argv[1])
-target_dir = "data_delta_" + str(sys.argv[1])
-
+elif sys.argv[2] == 'Delta':
+    train_file = os.path.join(home, "corpus", "DRCD", "DRCD_training.json")
+    dev_file = os.path.join(home, "corpus", "DRCD", "DRCD_dev.json")
+    test_file = os.path.join(home, "corpus", "DRCD", "DRCD_dev.json")
+    # glove_word_file = os.path.join(home, "corpus", "glove", "glove.840B.300d.txt")
+    glove_word_file = None
+    train_dir = "train_delta_" + str(sys.argv[1])
+    target_dir = "data_kgb_" + str(sys.argv[1])
+    
+elif sys.argv[2] == 'KGB':
+    train_file = None
+    dev_file = None
+    glove_word_file = None
+    test_file = os.path.join("kgb", "0622.json")
+    train_dir = "train_delta_" + str(sys.argv[1])
+    target_dir = "data_kgb_" + str(sys.argv[1])
 
 # model_name = sys.argv[1] # "all"
 dir_name = os.path.join(train_dir)
@@ -42,7 +46,7 @@ if not os.path.exists(train_dir):
 if not os.path.exists(os.path.join(os.getcwd(),dir_name)):
     os.mkdir(os.path.join(os.getcwd(),dir_name))
 
-embedding_dir = target_dir
+embedding_dir = "data_kgb_" + str(sys.argv[1])
 
 log_dir = os.path.join(dir_name, "event")
 save_dir = os.path.join(dir_name, "model")
@@ -61,8 +65,8 @@ test_meta = os.path.join(target_dir, "test_meta.json")
 
 word_dictionary = os.path.join(embedding_dir, "word_dictionary.json")
 char_dictionary = os.path.join(embedding_dir, "char_dictionary.json")
-answer_file = os.path.join(answer_dir, "answer.json")
-answer_csv = os.path.join(answer_dir, "answer.csv")
+answer_file = os.path.join('kgb', "kgb_answer.json")
+answer_csv = os.path.join('kgb', "kgb_answer.csv")
 
 if not os.path.exists(target_dir):
     os.makedirs(target_dir)
@@ -107,8 +111,8 @@ flags.DEFINE_integer("char_dim", 64, "Embedding dimension for char")
 flags.DEFINE_integer("para_limit", 400, "Limit length for paragraph")
 flags.DEFINE_integer("ques_limit", 50, "Limit length for question")
 flags.DEFINE_integer("ans_limit", 30, "Limit length for answers")
-flags.DEFINE_integer("test_para_limit", 1000, "Limit length for paragraph in test file")
-flags.DEFINE_integer("test_ques_limit", 100, "Limit length for question in test file")
+flags.DEFINE_integer("test_para_limit", 1750, "Limit length for paragraph in test file")
+flags.DEFINE_integer("test_ques_limit", 200, "Limit length for question in test file")
 flags.DEFINE_integer("test_ans_limit", 100, "Limit length for answer in test file")
 flags.DEFINE_integer("char_limit", 16, "Limit length for character")
 flags.DEFINE_integer("word_count_limit", -1, "Min count for word")
@@ -154,7 +158,8 @@ flags.DEFINE_integer("tw_char_size", 174894, "Corpus size for char2vec")
 flags.DEFINE_integer("tw_word_dim", 300, "Embedding dimension for Glove")
 flags.DEFINE_integer("tw_char_dim", 300, "Embedding dimension for char")
 
-flags.DEFINE_string("type", "all", "word/char embedding choose")
+# flags.DEFINE_string("type", "all", "word/char embedding choose")
+flags.DEFINE_string("type", str(sys.argv[1]).split('_')[0], "word/char embedding choose")
 
 def main(_):
     config = flags.FLAGS

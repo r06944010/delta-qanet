@@ -174,8 +174,9 @@ def test(config):
                 remapped_dict.update(remapped_dict_)
                 losses.append(loss)
             loss = np.mean(losses)
-            with open(config.answer_file, "w") as fh:
-                json.dump(remapped_dict, fh)
+
+            #with open(config.answer_file, "w") as fh:
+            #    json.dump(remapped_dict, fh)
             '''
             metrics = evaluate(eval_file, answer_dict)
             print("Exact Match: {}, F1: {}".format(
@@ -185,4 +186,4 @@ def test(config):
                 print('dumping ans file to : %s' % str(config.answer_csv))
                 s = csv.writer(f,delimiter=',',lineterminator='\n')
                 for i in sorted(remapped_dict):  
-                    s.writerow([i,remapped_dict[i]])
+                    s.writerow([remapped_dict[i]])

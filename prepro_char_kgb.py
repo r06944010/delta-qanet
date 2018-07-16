@@ -42,56 +42,41 @@ def process_file(filename, data_type, word_counter, char_counter):
     total = 0
     with open(filename, "r") as fh:
         source = json.load(fh)
-        for article in tqdm(source["data"]):
-            for para in article["paragraphs"]:
-                context = para["context"].replace(
-                    "''", '" ').replace("``", '" ')
-                context_tokens = list(context)
-                context_chars = [list(token) for token in context_tokens]
-                spans = convert_idx(context, context_tokens)
-                for token in context_tokens:
-                    word_counter[token] += len(para["qas"])
-                    for char in token:
-                        char_counter[char] += len(para["qas"])
-                for qa in para["qas"]:
-                    total += 1
-                    ques = qa["question"].replace(
-                        "''", '" ').replace("``", '" ')
-                    ques_tokens = list(ques)
-                    ques_chars = [list(token) for token in ques_tokens]
-                    for token in ques_tokens:
-                        word_counter[token] += 1
-                        for char in token:
-                            char_counter[char] += 1
-                    y1s, y2s = [], []
-                    answer_texts = []
-                    for answer in qa["answers"]:
-                        answer_text = answer["text"]
-                        answer_start = answer['answer_start']
-                        answer_end = answer_start + len(answer_text)
-                        answer_texts.append(answer_text)
-                        answer_span = []
-                        for idx, span in enumerate(spans):
-                            if not (answer_end <= span[0] or answer_start >= span[1]):
-                                answer_span.append(idx)
-                        y1, y2 = answer_span[0], answer_span[-1]
-                        y1s.append(y1)
-                        y2s.append(y2)
-                    '''
-                    print("==============")
-                    print(answer_text)
-                    print(context_tokens[y1s[0]])
-                    print(context_tokens[y2s[0]])
-                    '''
+        for _id in range(len(source)):
+            context = source[_id]['context'].replace("''", '" ').replace("``", '" ')
+            context_tokens = list(context)
+            context_chars = [list(token) for token in context_tokens]
+            spans = convert_idx(context, context_tokens)
+            
+            ques = source[_id]["question"].replace("''", '" ').replace("``", '" ')
+            ques_tokens = list(ques)
+            ques_chars = [list(token) for token in ques_tokens]
 
-                    #print(y1s, answer_start)
-                    #print(y2s, answer_end-1)
-                    example = {"context_tokens": context_tokens, "context_chars": context_chars, "ques_tokens": ques_tokens,
-                               "ques_chars": ques_chars, "y1s": y1s, "y2s": y2s, "id": total}
-                    examples.append(example)
-                    eval_examples[str(total)] = {
-                        "context": context, "spans": spans, "answers": answer_texts, "uuid": qa["id"]}
-        random.shuffle(examples)
+            opts_tokens = list(source[_id]["options"])
+
+            for token in context_tokens:
+                word_counter[token] += 1
+                for char in token:
+                    char_counter[char] += 1
+
+            for token in ques_tokens:
+                word_counter[token] += 1
+                for char in token:
+                    char_counter[char] += 1
+            
+            for token in opts_tokens:
+                word_counter[token] += 1
+                for char in token:
+                    char_counter[char] += 1
+
+
+            example = {"context_tokens": context_tokens, "context_chars": context_chars, "ques_tokens": ques_tokens,
+                       "ques_chars": ques_chars, "y1s": [-1], "y2s": [-1], "id": source[_id]['id']}
+            examples.append(example)
+
+            eval_examples[source[_id]['id']] = {
+                "context": context, "spans": spans, "answers": None, "uuid": source[_id]['id']}
+
         print("{} questions in total".format(len(examples)))
     return examples, eval_examples
 
@@ -109,9 +94,8 @@ def get_embedding(counter, data_type, limit=-1, emb_file=None, size=None, vec_si
                 array = line.split()
                 word = "".join(array[0:-vec_size])
                 vector = list(map(float, array[-vec_size:]))
-                #if word in counter and counter[word] > limit:
-                #    embedding_dict[word] = vector
-                embedding_dict[word] = vector
+                if word in counter and counter[word] > limit:
+                    embedding_dict[word] = vector
         print("{} / {} tokens have corresponding {} embedding vector".format(
             len(embedding_dict), len(filtered_elements), data_type))
     else:
@@ -216,9 +200,6 @@ def build_features(config, examples, data_type, out_file, word2idx_dict, char2id
     for example in tqdm(examples):
         total_ += 1
 
-        if filter_func(example, is_test):
-            continue
-
         total += 1
         context_idxs = np.zeros([para_limit], dtype=np.int32)
         context_char_idxs = np.zeros([para_limit, char_limit], dtype=np.int32)
@@ -284,19 +265,10 @@ def save(filename, obj, message=None):
 
 def prepro(config):
     word_counter, char_counter = Counter(), Counter()
-    train_examples, train_eval = process_file(
-        config.train_file, "train", word_counter, char_counter)
-    dev_examples, dev_eval = process_file(
-        config.dev_file, "dev", word_counter, char_counter)
+
     test_examples, test_eval = process_file(
         config.test_file, "test", word_counter, char_counter)
-
-    '''
-    word_emb_file = config.fasttext_file if config.fasttext else config.glove_word_file
-    char_emb_file = config.glove_char_file if config.pretrained_char else None
-    char_emb_size = config.glove_char_size if config.pretrained_char else None
-    char_emb_dim = config.glove_dim if config.pretrained_char else config.char_dim
-    '''
+    
     word_emb_file = config.tw_w2v
     char_emb_file = config.tw_c2v
     char_emb_size = config.tw_char_size
@@ -306,20 +278,18 @@ def prepro(config):
         word_counter, "word", emb_file=word_emb_file, size=config.tw_word_size, vec_size=config.tw_word_dim)
     char_emb_mat, char2idx_dict = get_embedding(
         char_counter, "char", emb_file=char_emb_file, size=char_emb_size, vec_size=char_emb_dim)
-
-    build_features(config, train_examples, "train",
-                   config.train_record_file, char2idx_dict, char2idx_dict)
-    dev_meta = build_features(config, dev_examples, "dev",
-                              config.dev_record_file, char2idx_dict, char2idx_dict)
+    '''
+    with open(config.char_emb_file, "r") as fh:
+        char_mat = np.array(json.load(fh), dtype=np.float32)
+    with open(config.char_dictionary, "r") as fh:
+        char2idx_dict = json.load(fh)
+    '''
     test_meta = build_features(config, test_examples, "test",
                                config.test_record_file, char2idx_dict, char2idx_dict, is_test=True)
     
-    save(config.word_emb_file, word_emb_mat, message="word embedding")
-    save(config.char_emb_file, char_emb_mat, message="char embedding")
-    save(config.train_eval_file, train_eval, message="train eval")
-    save(config.dev_eval_file, dev_eval, message="dev eval")
     save(config.test_eval_file, test_eval, message="test eval")
-    save(config.dev_meta, dev_meta, message="dev meta")
     save(config.test_meta, test_meta, message="test meta")
+    save(config.word_emb_file, word_emb_mat, message="word embedding")
     save(config.word_dictionary, word2idx_dict, message="word dictionary")
+    save(config.char_emb_file, char_emb_mat, message="char embedding")
     save(config.char_dictionary, char2idx_dict, message="char dictionary")
